@@ -3,4 +3,4 @@ scipy
 pandas
 matplotlib
 requests
-scikits.learn
+scikit-learn
