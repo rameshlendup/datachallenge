@@ -41,8 +41,9 @@ class LoanData:
         return self.loan_data.head()
 
     def preprocess_data(self):
+        """Preprocess data, strip unwanted characters from certain columns
+        """
         import re
-
         self.loan_data['int_rate'] = self.loan_data['int_rate'].map(lambda x: x.rstrip('%'))
         self.loan_data['int_rate'] = self.loan_data['int_rate'].astype('float32')
         #self.loan_data['revol_util'] = self.loan_data['revol_util'].map(lambda x: x.rstrip('%'))
@@ -53,10 +54,16 @@ class LoanData:
         self.loan_data['emp_length'] = self.loan_data['emp_length'].astype('int16')
 
     def convert_categoricals(self, categoricals):
+        """
+        Convert categorical columns from objects to categories
+        """
         for cat in categoricals:
             self.loan_data[cat] = self.loan_data[cat].astype('category')
 
     def convert_date_fields(self, date_fields):
+        """
+        Convert date fields to numerical, time since epoch
+        """
         from datetime import date
         mon = {'Jan':1, 'Feb':2, 'Mar':3, 'Apr':4, 'May':5, 'Jun':6, 'Jul':7, 'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12}
         for datef in date_fields:
@@ -70,21 +77,24 @@ class LoanData:
         from sklearn import preprocessing
         from sklearn.ensemble import RandomForestClassifier
 
+
         drop_columns = [ 'id', 'member_id', 'emp_title', 'url', 'desc', 'title' , 'last_pymnt_d','next_pymnt_d','last_credit_pull_d',
                          'revol_util']
         categoricals = ['grade', 'sub_grade', 'home_ownership', 'verification_status', 'pymnt_plan', 'purpose',
                         'zip_code', 'addr_state', 'initial_list_status']
         date_fields = ['issue_d', 'earliest_cr_line']
+        ### Data cleansing
         self.convert_categoricals(categoricals)
         self.convert_date_fields(date_fields)
         self.preprocess_data()
-
         for col in (set(self.loan_data.columns) - set(categoricals) - set(drop_columns)):
             self.loan_data[col].fillna(0, inplace=True)
+
+        # Split test & training data as 1:3
         self.loan_data['is_train'] = np.random.uniform(0, 1, len(self.loan_data)) <= .75
         self.train, self.test = self.loan_data[self.loan_data['is_train']==True], self.loan_data[self.loan_data['is_train']==False]
 
-        # Convert loan_status to a format that we can use
+        # Convert loan_status to a format that we can use to train
         labels_train = (self.loan_data[self.loan_data['is_train']==True])[['loan_status']]
         labels_test = (self.loan_data[self.loan_data['is_train']==False])[['loan_status']]
         le = preprocessing.LabelEncoder()
@@ -92,15 +102,17 @@ class LoanData:
         labels_train = le.fit_transform(labels_train)
         labels_test = le.transform(labels_test)
 
-        # vectorize training data
+        # Keep only categorical data here
         categorical_view = self.loan_data.drop(list( (set(self.loan_data.columns) - set(categoricals)) ) , axis=1)
         del self.loan_data['loan_status']
 
+        # Generate categorical training & test data
         categorical_train_as_dicts = [dict(r.iteritems()) for _, r in categorical_view[self.loan_data['is_train']==True].iterrows()]
         categorical_train_fea = dv.fit_transform(categorical_train_as_dicts)
         categorical_test_as_dicts = [dict(r.iteritems()) for _, r in categorical_view[self.loan_data['is_train']==False].iterrows()]
         categorical_test_fea = dv.transform(categorical_test_as_dicts)
 
+        # Generate numerical training & test data
         numerical_train = self.loan_data[self.loan_data['is_train']==True].drop(list( set(drop_columns) | set(categoricals) | set(['is_train'])), axis=1)
         numerical_train_fea = numerical_train.as_matrix()
         numerical_test = self.loan_data[self.loan_data['is_train']==False].drop(list( set(drop_columns) | set(categoricals) | set(['is_train'])), axis=1)
@@ -109,9 +121,14 @@ class LoanData:
         train_fea = np.concatenate( (categorical_train_fea, numerical_train_fea), axis=1)
         test_fea = np.concatenate( (categorical_test_fea, numerical_test_fea), axis=1)
 
+        # Use a random forest classifier
         self.clf = RandomForestClassifier(n_jobs=10)
         self.clf.fit(train_fea, labels_train)
+        
+        # Predict now for test data
         label_predictions = le.inverse_transform(self.clf.predict(test_fea).astype('I'))
+
+        # Some output of how we did
         print "Predictions"
         print label_predictions
         print "Original Test set labels"
@@ -125,6 +142,8 @@ class LoanData:
         pass
 
     def save_histogram(self, column_name, filename):
+        """Save the Histogram for a numerical column, default 100 bins
+        """
         if column_name in self.loan_data_nonnumeric:
             raise Exception('Cannot generate histogram for non-numeric data')
         figure(figsize=(12, 9))
@@ -145,9 +164,9 @@ class LoanData:
 
 
     def save_bar_chart(self, column_name, filename):
+        """Saves the bar chart, extra method in case we want to plot categorical variables"""
         if column_name in self.loan_data_numeric:
             raise Exception('Cannot generate bar chart for numeric data')
-        #figure(figsize=(12, 9))
         figure()
         ax = subplot(111)
         ax.spines["top"].set_visible(False)
@@ -167,9 +186,9 @@ class LoanData:
         savefig(filename or (column_name+'.png'))
 
 if __name__== "__main__":
+    """Main program, runs the script, to write 1000 random rows to a file"""
     #ld = LoanData()
     #ld.train_and_predict()
-
     no_of_lines = 1000
     requested_file = requests.get("https://resources.lendingclub.com/LoanStats3b.csv.zip")
     zipped = zipfile.ZipFile(StringIO.StringIO(requested_file.content))
