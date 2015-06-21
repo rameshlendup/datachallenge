@@ -79,10 +79,18 @@ Name: recoveries, dtype: float64
 
 
 ```
-from lendup import LoanData
-ld = LoanData()
-ld.train_and_learn()
-
+>>> from lendup import LoanData
+>>> ld = LoanData()
+>>> orig, pred = ld.train_and_predict()
+>>> confusion_matrix( orig, pred)
+#########################PREDICTIONS
+array([[ 4123,     1,     0,   153,     0,     0,     0],  # Charged off
+       [    0, 25335,     0,     4,     0,     0,     2],  # Current
+#O     [    0,    17,     0,     1,     0,     0,     0],  # Default
+#R     [   13,     0,     0, 15980,     0,     0,     0],  # Fully paid
+#I     [    0,   388,     0,     0,     0,     0,     0],  # In Grace Period
+#G     [    0,   125,     0,     0,     0,     0,     2],  # Late (16-30 days)'
+       [    0,   645,     0,     0,     0,     0,     6]]) # Late (31-120 days)
 ```
 
 

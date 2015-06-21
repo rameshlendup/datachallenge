@@ -10,7 +10,7 @@ import numpy as np
 
 class LoanData:
     """
-    Prints summary statistics of columns
+    Prints summary statistics of columns, train and predict the model, get random 1000 rows
     """
     def __init__(self, csvfilename=None):
         if csvfilename:
@@ -63,13 +63,12 @@ class LoanData:
             self.loan_data[datef] = self.loan_data[datef].map(lambda x: date(int(x.split('-')[1]), mon[x.split('-')[0]] ,1).strftime('%s') )
             self.loan_data[datef] = self.loan_data[datef].astype('int32')
 
-    def train_and_learn(self):
+    def train_and_predict(self):
         import pandas as pd
         from sklearn import tree
         from sklearn.feature_extraction import DictVectorizer
         from sklearn import preprocessing
         from sklearn.ensemble import RandomForestClassifier
-
 
         drop_columns = [ 'id', 'member_id', 'emp_title', 'url', 'desc', 'title' , 'last_pymnt_d','next_pymnt_d','last_credit_pull_d',
                          'revol_util']
@@ -117,6 +116,10 @@ class LoanData:
         print label_predictions
         print "Original Test set labels"
         print le.inverse_transform(labels_test)
+        orig = le.inverse_transform(labels_test).flatten()
+        pred = label_predictions
+        return (orig, pred)
+    
 
     def write_random_csv(self):
         pass
@@ -165,7 +168,7 @@ class LoanData:
 
 if __name__== "__main__":
     #ld = LoanData()
-    #ld.train_and_learn()
+    #ld.train_and_predict()
 
     no_of_lines = 1000
     requested_file = requests.get("https://resources.lendingclub.com/LoanStats3b.csv.zip")
