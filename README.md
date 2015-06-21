@@ -72,6 +72,7 @@ Name: recoveries, dtype: float64
 >>> ld.save_histogram('loan_amnt', 'loan_amnt.png')
 >>>
 ```
+![Image of Loan Amount]
 (https://raw.githubusercontent.com/rameshlendup/datachallenge/master/loan_amnt.png)
 
 ### Question 2
